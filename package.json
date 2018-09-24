@@ -1,6 +1,6 @@
 {
   "name": "abstract-form-redux",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Abstract form extension library Redux",
   "main": "lib/index.js",
   "scripts": {
