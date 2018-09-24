@@ -44,7 +44,10 @@ describe('Abstract Form Enhancer', () => {
       expect(spy).to.have.been.called.once;
       expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
         {
-          data: {}
+          data: {
+            q1: undefined,
+            q2: undefined
+          }
         });
     });
   });
