@@ -4,7 +4,9 @@
   "description": "Abstract form extension library Redux",
   "main": "lib/index.js",
   "scripts": {
-    "test": "mocha --require ts-node/register --ui bdd src/**/*.spec.ts",
+    "test:unit": "mocha --require ts-node/register --ui bdd src/**/*.spec.ts",
+    "test:jest": "jest",
+    "test": "npm run test:unit && npm run test:jest",
     "build": "rm -Rf lib/* && tsc -p ."
   },
   "jest": {
@@ -17,7 +19,7 @@
       "js"
     ],
     "testMatch": [
-      "**/__tests__/*.(ts|tsx|js)"
+      "**/__tests__/*.(ts|tsx)"
     ]
   },
   "repository": {

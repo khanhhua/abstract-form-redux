@@ -8,7 +8,7 @@ import {expect} from 'chai';
 import React from 'react';
 import {Provider, connect} from 'react-redux';
 import {AnyAction, applyMiddleware, createStore, Reducer} from "redux";
-import {action, FORM_INIT, formMiddleware} from "../src";
+import {action, FORM_INIT, formEnhancer, formMiddleware} from "../src";
 import {IFormItemConfig} from 'abstract-form';
 
 class Form extends React.Component {
@@ -56,7 +56,6 @@ class Form extends React.Component {
 
 const ConnectedForm = connect(
   (state: any) => {
-    // TODO Must guarantee in store enhancer that $$abstractForm exists so that we can remove default fallback
     return {
       form: !!state.$$abstractForm?state.$$abstractForm.form:null
     };
@@ -69,13 +68,9 @@ describe('Static Form Integration', () => {
   it('should render', () => {
 // @ts-ignore
     const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
-      if (action.type === FORM_INIT) {
-        return {...state, $$abstractForm: action.payload};
-      } else {
-        return state;
-      }
+      return state;
     };
-    const store = createStore(dummyReducer, {}, applyMiddleware(formMiddleware()));
+    const store = createStore(dummyReducer, {}, formEnhancer());
     const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
 
     expect(wrapper.html()).to.be.equal('<ul><li></li><li></li></ul>');

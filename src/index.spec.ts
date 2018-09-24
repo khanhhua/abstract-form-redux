@@ -4,22 +4,26 @@ import chaiSpies from 'chai-spies';
 chai.use(chaiSpies);
 
 import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
-import {action, formMiddleware, FORM_INIT, FORM_RESTORE_DATA, FORM_SET_VALUE, FORM_VALIDATE} from "./index";
+import {
+  action,
+  formMiddleware,
+  FORM_INIT,
+  FORM_RESTORE_DATA,
+  FORM_SET_VALUE,
+  FORM_VALIDATE,
+  formEnhancer
+} from "./index";
 import {Form, parseConfig} from "abstract-form/lib";
 
-describe('Abstract Form Middleware', () => {
+describe('Abstract Form Enhancer', () => {
   describe('action FORM_INIT', () => {
     const spy = chai.spy();
 
     // @ts-ignore
     const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
-      if (action.type === FORM_INIT) {
-        return {...state, $$abstractForm: action.payload};
-      } else {
-        return state;
-      }
+      return state;
     };
-    const store = createStore(dummyReducer, {}, applyMiddleware(formMiddleware()));
+    const store = createStore(dummyReducer, {}, formEnhancer());
     store.subscribe(spy);
 
     it('should pass', () => {

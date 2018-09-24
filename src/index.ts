@@ -1,4 +1,4 @@
-import {Middleware} from "redux";
+import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
 import {IFormConfig, Form, parseConfig} from "abstract-form/lib";
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
@@ -10,6 +10,14 @@ export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
 interface IAbstractFormState {
   form: Form;
 }
+
+const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
+  if (action.type === FORM_INIT) {
+    return {...state, $$abstractForm: action.payload};
+  } else {
+    return state;
+  }
+};
 
 export function formMiddleware(options: any = {}):Middleware<any, any, any> {
   return <Middleware<any, any, any>>(store => next => action => {
@@ -40,13 +48,17 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
   })
 }
 
-// export function formEnhancer(middlewares: (()=>any)[]):(store:any)=>any {
-//   return createStore => (reducer, initialState, enhancer) => {
-//     const liftedStore = createStore(reducer, enhancer);
-//
-//     return liftedStore(reducer, enhancer);
-//   };
-// }
+export function formEnhancer(options: any = {}):(store:any)=>any {
+  return createStore => (reducer: Reducer<{}, AnyAction>, initialState: any) => {
+    const liftedStore = createStore(
+      compose(reducer, formReducer),
+      { ...initialState, $$abstractForm:null },
+      applyMiddleware(formMiddleware(options))
+    );
+
+    return liftedStore;
+  };
+}
 
 export function action(type: string, payload: any):{ type: string, payload: any } {
   return { type, payload };
