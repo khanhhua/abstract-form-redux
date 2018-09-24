@@ -1,6 +1,6 @@
 {
   "name": "abstract-form-redux",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Abstract form extension library Redux",
   "main": "lib/index.js",
   "scripts": {
@@ -60,6 +60,6 @@
     "@types/enzyme-adapter-react-16": "^1.0.3"
   },
   "dependencies": {
-    "abstract-form": "file:../abstract-form"
+    "abstract-form": "git+https://github.com/khanhhua/abstract-form.git"
   }
 }
