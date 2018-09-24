@@ -1,5 +1,6 @@
 import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
-import {IFormConfig, Form, parseConfig} from "abstract-form/lib";
+import {parseConfig} from "abstract-form/lib";
+import {Form} from "abstract-form/lib/form";
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
 export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';

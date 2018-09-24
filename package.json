@@ -60,6 +60,6 @@
     "@types/enzyme-adapter-react-16": "^1.0.3"
   },
   "dependencies": {
-    "abstract-form": "git+https://github.com/khanhhua/abstract-form.git"
+    "abstract-form": "git+https://github.com/khanhhua/abstract-form.git#v0.0.1"
   }
 }

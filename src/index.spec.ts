@@ -3,17 +3,17 @@ import chaiSpies from 'chai-spies';
 
 chai.use(chaiSpies);
 
-import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
+import {AnyAction, createStore, Reducer} from 'redux';
 import {
   action,
-  formMiddleware,
   FORM_INIT,
   FORM_RESTORE_DATA,
   FORM_SET_VALUE,
   FORM_VALIDATE,
   formEnhancer
 } from "./index";
-import {Form, parseConfig} from "abstract-form/lib";
+import {parseConfig} from "abstract-form/lib";
+import {Form} from "abstract-form/lib/form";
 
 describe('Abstract Form Enhancer', () => {
   describe('action FORM_INIT', () => {
