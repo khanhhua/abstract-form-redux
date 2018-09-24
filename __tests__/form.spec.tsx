@@ -7,8 +7,8 @@ import {expect} from 'chai';
 
 import React from 'react';
 import {Provider, connect} from 'react-redux';
-import {AnyAction, applyMiddleware, createStore, Reducer} from "redux";
-import {action, FORM_INIT, formEnhancer, formMiddleware} from "../src";
+import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
+import {action, FORM_INIT, FORM_SET_VALUE formEnhancer} from '../src';
 import {IFormItemConfig} from 'abstract-form';
 
 class Form extends React.Component {
@@ -46,8 +46,8 @@ class Form extends React.Component {
 
     return (
       <ul>
-      {(form.config.items || []).map((item:IFormItemConfig, index:number) => (
-        <li key={index}>{form.select(item.id)}</li>
+      {(Object.entries(form) || []).map((item, index:number) => (
+        <li key={index}>{item[1]}</li>
       ))}
       </ul>
     );
@@ -57,7 +57,7 @@ class Form extends React.Component {
 const ConnectedForm = connect(
   (state: any) => {
     return {
-      form: !!state.$$abstractForm?state.$$abstractForm.form:null
+      form: !!state.$$abstractForm?state.$$abstractForm.data:null
     };
   },
   (dispatch) => {
@@ -65,14 +65,28 @@ const ConnectedForm = connect(
   })(Form);
 
 describe('Static Form Integration', () => {
-  it('should render', () => {
-// @ts-ignore
-    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
-      return state;
-    };
+  it('should render initial state', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
     const store = createStore(dummyReducer, {}, formEnhancer());
     const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
 
     expect(wrapper.html()).to.be.equal('<ul><li></li><li></li></ul>');
+  });
+
+  it('should render updated data', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+    const store = createStore(dummyReducer, {}, formEnhancer());
+    const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
+    store.dispatch(action(FORM_SET_VALUE, {
+      path: '$',
+      value: {
+        q1: 'Tom',
+        q2: 1980
+      }
+    }));
+
+    expect(wrapper.html()).to.be.equal('<ul><li>Tom</li><li>1980</li></ul>');
   });
 });

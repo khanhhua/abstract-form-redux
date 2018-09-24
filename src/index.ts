@@ -1,6 +1,6 @@
 import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
-import {parseConfig} from "abstract-form/lib";
-import {Form} from "abstract-form/lib/form";
+import {parseConfig} from 'abstract-form/lib';
+import {Form} from 'abstract-form/lib/form';
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
 export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';
@@ -10,28 +10,46 @@ export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
 
 interface IAbstractFormState {
   form: Form;
+  data: {};
+}
+
+interface IAbstractFormStateContainer {
+  $$abstractForm: IAbstractFormState
 }
 
 const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
   if (action.type === FORM_INIT) {
-    return {...state, $$abstractForm: action.payload};
+    let $$abstractForm = action.payload;
+    return {...state, $$abstractForm};
+  } else if (action.type === FORM_SET_VALUE) {
+    let form = state.$$abstractForm.form;
+    return {...state, $$abstractForm: {
+      form,
+      data: action.payload
+    }};
   } else {
     return state;
   }
 };
 
 export function formMiddleware(options: any = {}):Middleware<any, any, any> {
+  function ensureState(state:any):boolean {
+    return !!state.$$abstractForm;
+  }
+
   return <Middleware<any, any, any>>(store => next => action => {
     switch (action.type) {
-      case FORM_INIT:
+      case FORM_INIT: {
         const state:any = store.getState();
-        if (state.$$abstractForm) {
+        if (ensureState(state)) {
           return;
         }
 
         let config = parseConfig(action.payload);
+        let form:Form = new Form(config);
         let $$abstractForm: IAbstractFormState = {
-          form: new Form(config)
+          form,
+          data: form.select('$')
         };
 
         next({
@@ -40,8 +58,24 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
         });
 
         break;
+      }
       case FORM_RESTORE_DATA: break;
-      case FORM_SET_VALUE: break;
+      case FORM_SET_VALUE: {
+        const state:IAbstractFormStateContainer = <IAbstractFormStateContainer>store.getState();
+        if (!ensureState(state)) {
+          return;
+        }
+        let form:Form = state.$$abstractForm.form;
+        const { path, value } = action.payload;
+
+        form.setData(path, value);
+        next({
+          type: FORM_SET_VALUE,
+          payload: form.select('$')
+        });
+
+        break;
+      }
       case FORM_VALIDATE: break;
       default:
         next(action);
