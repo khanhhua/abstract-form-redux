@@ -1,3 +1,4 @@
+import 'core-js/fn/object/entries';
 import enzyme from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
 
@@ -10,6 +11,8 @@ import {Provider, connect} from 'react-redux';
 import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
 import {action, FORM_INIT, FORM_SET_VALUE formEnhancer} from '../src';
 import {IFormItemConfig} from 'abstract-form';
+import {FORM_VALIDATE} from "../src";
+import {IError} from "abstract-form/lib";
 
 class Form extends React.Component {
   constructor(props:any) {
@@ -24,7 +27,8 @@ class Form extends React.Component {
         {
           "id": "q1",
           "dataType": "text",
-          "label": "Nick name"
+          "label": "Nick name",
+          "required": true
         },
         {
           "id": "q2",
@@ -39,15 +43,18 @@ class Form extends React.Component {
 
   render() {
     // @ts-ignore
-    const {form} = this.props;
+    const {form, errors} = this.props;
     if (!form) {
       return <ul></ul>;
     }
 
     return (
       <ul>
-      {(Object.entries(form) || []).map((item, index:number) => (
-        <li key={index}>{item[1]}</li>
+      {(Object.entries(form) || []).map((item:Array<any>, index:number) => (
+        <li key={`f-${index}`}>{item[1]}</li>
+      ))}
+      {(errors || []).map((item:IError, index:number) => (
+        <li key={`e-${index}`}>error: {item.path} {item.message}</li>
       ))}
       </ul>
     );
@@ -57,7 +64,8 @@ class Form extends React.Component {
 const ConnectedForm = connect(
   (state: any) => {
     return {
-      form: !!state.$$abstractForm?state.$$abstractForm.data:null
+      form: !!state.$$abstractForm?state.$$abstractForm.data:null,
+      errors: !!state.$$abstractForm?state.$$abstractForm.errors:null
     };
   },
   (dispatch) => {
@@ -88,5 +96,21 @@ describe('Static Form Integration', () => {
     }));
 
     expect(wrapper.html()).to.be.equal('<ul><li>Tom</li><li>1980</li></ul>');
+  });
+
+  it('should render errors', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+    const store = createStore(dummyReducer, {}, formEnhancer());
+    const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
+    store.dispatch(action(FORM_SET_VALUE, {
+      path: '$',
+      value: {
+        q2: 1980
+      }
+    }));
+    store.dispatch(action(FORM_VALIDATE, { paths: '$' }));
+
+    expect(wrapper.html()).to.be.equal('<ul><li></li><li>1980</li><li>error: $.q1 required</li></ul>');
   });
 });
