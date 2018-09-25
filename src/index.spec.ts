@@ -52,8 +52,44 @@ describe('Abstract Form Enhancer', () => {
   });
 
   describe('action FORM_RESTORE_DATA', () => {
-    it('should pass', () => {
+    it('should restore data and clear errors', () => {
+      const spy = chai.spy();
 
+      // @ts-ignore
+      const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+      const store = createStore(dummyReducer, {}, formEnhancer());
+      store.subscribe(spy);
+
+
+      let configString = `{
+        "items": [
+          {
+            "id": "q1",
+            "dataType": "text",
+            "label": "Nick name"
+          },
+          {
+            "id": "q2",
+            "dataType": "number",
+            "label": "Year of birth"
+          }
+        ]
+      }`;
+      store.dispatch(action(FORM_INIT, configString));
+      store.dispatch(action(FORM_RESTORE_DATA, {
+        q1: 'Tom',
+        q2: 1980
+      }));
+
+      expect(spy).to.have.been.called.twice;
+      expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
+        {
+          data: {
+            q1: 'Tom',
+            q2: 1980
+          },
+          errors: []
+        });
     });
   });
 
