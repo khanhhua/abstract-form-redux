@@ -1,5 +1,5 @@
 import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
-import {parseConfig} from 'abstract-form/lib';
+import {IError, parseConfig, ValidationResult} from 'abstract-form/lib';
 import {Form} from 'abstract-form/lib/form';
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
@@ -11,6 +11,7 @@ export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
 interface IAbstractFormState {
   form: Form;
   data: {};
+  errors: IError[];
 }
 
 interface IAbstractFormStateContainer {
@@ -22,11 +23,21 @@ const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
     let $$abstractForm = action.payload;
     return {...state, $$abstractForm};
   } else if (action.type === FORM_SET_VALUE) {
-    let form = state.$$abstractForm.form;
+    let {form, errors} = state.$$abstractForm;
     return {...state, $$abstractForm: {
       form,
+      errors,
       data: action.payload
     }};
+  } else if (action.type === FORM_VALIDATE) {
+    let { form, data } = state.$$abstractForm;
+    let payload:ValidationResult = action.payload;
+
+    return {...state, $$abstractForm: {
+        form,
+        data,
+        errors: payload.ok?[]:payload.errors
+      }};
   } else {
     return state;
   }
@@ -38,9 +49,10 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
   }
 
   return <Middleware<any, any, any>>(store => next => action => {
+    const state:IAbstractFormStateContainer = <IAbstractFormStateContainer>store.getState();
+
     switch (action.type) {
       case FORM_INIT: {
-        const state:any = store.getState();
         if (ensureState(state)) {
           return;
         }
@@ -49,7 +61,8 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
         let form:Form = new Form(config);
         let $$abstractForm: IAbstractFormState = {
           form,
-          data: form.select('$')
+          data: form.select('$'),
+          errors: []
         };
 
         next({
@@ -61,7 +74,6 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
       }
       case FORM_RESTORE_DATA: break;
       case FORM_SET_VALUE: {
-        const state:IAbstractFormStateContainer = <IAbstractFormStateContainer>store.getState();
         if (!ensureState(state)) {
           return;
         }
@@ -76,7 +88,40 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 
         break;
       }
-      case FORM_VALIDATE: break;
+      case FORM_VALIDATE: {
+        if (!ensureState(state)) {
+          return;
+        }
+        let form:Form = state.$$abstractForm.form;
+        const { paths } = action.payload;
+        let result:ValidationResult;
+
+        if (paths === '$') {
+          result = form.validate(paths)
+          next({
+            type: FORM_VALIDATE,
+            payload: result
+          });
+          return;
+        } else if (Array.isArray(paths)) {
+          result = paths.reduce((acc: ValidationResult, path:string) => {
+            const thisValidation = form.validate(path);
+            if (thisValidation.ok) {
+              return acc;
+            } else {
+              thisValidation.errors.forEach(item => acc.addError(item))
+              return acc;
+            }
+          }, new ValidationResult())
+
+          next({
+            type: FORM_VALIDATE,
+            payload: result
+          });
+        }
+
+        break;
+      }
       default:
         next(action);
     }

@@ -12,8 +12,6 @@ import {
   FORM_VALIDATE,
   formEnhancer
 } from './index';
-import {parseConfig} from 'abstract-form/lib';
-import {Form} from 'abstract-form/lib/form';
 
 describe('Abstract Form Enhancer', () => {
   describe('action FORM_INIT', () => {
@@ -47,7 +45,8 @@ describe('Abstract Form Enhancer', () => {
           data: {
             q1: undefined,
             q2: undefined
-          }
+          },
+          errors: []
         });
     });
   });
@@ -94,14 +93,138 @@ describe('Abstract Form Enhancer', () => {
           data: {
             q1: 'Tom',
             q2: 1987
-          }
+          },
+          errors: []
         });
     });
   });
 
   describe('action FORM_VALIDATE', () => {
-    it('should pass', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
 
+    describe('validate from root ($)', () => {
+      it('should pass when there is no required fields', () => {
+        const spy = chai.spy();
+        const store = createStore(dummyReducer, {}, formEnhancer());
+        store.subscribe(spy);
+
+        let configString = `{
+        "items": [
+          {
+            "id": "q1",
+            "dataType": "text",
+            "label": "Nick name"
+          },
+          {
+            "id": "q2",
+            "dataType": "number",
+            "label": "Year of birth"
+          }
+        ]
+      }`;
+        store.dispatch(action(FORM_INIT, configString));
+        store.dispatch(action(FORM_VALIDATE, {
+          paths: '$'
+        }));
+
+        expect(spy).to.have.been.called.twice;
+        expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
+          {
+            data: {
+              q1: undefined,
+              q2: undefined
+            },
+            errors: []
+          });
+      });
+
+      it('should capture errors when required fields are empty', () => {
+        const spy = chai.spy();
+        const store = createStore(dummyReducer, {}, formEnhancer());
+        store.subscribe(spy);
+
+        let configString = `{
+        "items": [
+          {
+            "id": "q1",
+            "dataType": "text",
+            "label": "Nick name",
+            "required": true
+          },
+          {
+            "id": "q2",
+            "dataType": "number",
+            "label": "Year of birth",
+            "required": true
+          }
+        ]
+      }`;
+        store.dispatch(action(FORM_INIT, configString));
+        store.dispatch(action(FORM_VALIDATE, {
+          paths: '$'
+        }));
+
+        expect(spy).to.have.been.called.twice;
+        expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
+          {
+            data: {
+              q1: undefined,
+              q2: undefined
+            },
+            errors: [
+              {
+                message: 'required',
+                path: '$.q1',
+                severity: 'error',
+                value: undefined,
+              },
+              {
+                message: 'required',
+                path: '$.q2',
+                severity: 'error',
+                value: undefined
+              }
+            ]
+          });
+      });
+    });
+
+    describe('validate individual paths', () => {
+      it('should pass when there is no required fields', () => {
+        const spy = chai.spy();
+        const store = createStore(dummyReducer, {}, formEnhancer());
+        store.subscribe(spy);
+
+        let configString = `{
+          "items": [
+            {
+              "id": "q1",
+              "dataType": "text",
+              "label": "Nick name"
+            },
+            {
+              "id": "q2",
+              "dataType": "number",
+              "label": "Year of birth"
+            }
+          ]
+        }`;
+        store.dispatch(action(FORM_INIT, configString));
+        store.dispatch(action(FORM_VALIDATE, {
+          paths: ['q1','q2']
+        }));
+
+        expect(spy).to.have.been.called.twice;
+        expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
+          {
+            data: {
+              q1: undefined,
+              q2: undefined
+            },
+            errors: []
+          });
+      });
     });
   });
 });
