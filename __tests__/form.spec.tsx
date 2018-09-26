@@ -13,6 +13,7 @@ import {action, FORM_INIT, FORM_SET_VALUE formEnhancer} from '../src';
 import {IFormItemConfig} from 'abstract-form';
 import {FORM_VALIDATE} from "../src";
 import {IError} from "abstract-form/lib";
+import {FORM_RESTORE_DATA} from "../src";
 
 class Form extends React.Component {
   constructor(props:any) {
@@ -112,5 +113,20 @@ describe('Static Form Integration', () => {
     store.dispatch(action(FORM_VALIDATE, { paths: '$' }));
 
     expect(wrapper.html()).to.be.equal('<ul><li></li><li>1980</li><li>error: $.q1 required</li></ul>');
+  });
+
+  it('should render errors', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+    const store = createStore(dummyReducer, {}, formEnhancer());
+    const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
+
+    store.dispatch(action(FORM_VALIDATE, { paths: '$' }));
+    store.dispatch(action(FORM_RESTORE_DATA, {
+      q1: 'Tom',
+      q2: 1980
+    }));
+
+    expect(wrapper.html()).to.be.equal('<ul><li>Tom</li><li>1980</li></ul>');
   });
 });

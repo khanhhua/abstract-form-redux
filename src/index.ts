@@ -38,6 +38,13 @@ const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
         data,
         errors: payload.ok?[]:payload.errors
       }};
+  } else if (action.type === FORM_RESTORE_DATA) {
+    let {form} = state.$$abstractForm;
+    return {...state, $$abstractForm: {
+        form,
+        errors: [],
+        data: action.payload
+      }};
   } else {
     return state;
   }
@@ -72,7 +79,22 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 
         break;
       }
-      case FORM_RESTORE_DATA: break;
+      case FORM_RESTORE_DATA: {
+        if (!ensureState(state)) {
+          return;
+        }
+
+        let form:Form = state.$$abstractForm.form;
+        const value = action.payload;
+
+        form.setData('$', value);
+        next({
+          type: FORM_RESTORE_DATA,
+          payload: form.select('$')
+        });
+
+        break;
+      }
       case FORM_SET_VALUE: {
         if (!ensureState(state)) {
           return;
