@@ -1,6 +1,7 @@
 import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
 import {IError, parseConfig, ValidationResult} from 'abstract-form/lib';
 import {Form} from 'abstract-form/lib/form';
+import {bool} from "prop-types";
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
 export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';
@@ -8,9 +9,15 @@ export const FORM_SET_VALUE = '@@abstract-form-redux/FORM_SET_VALUE';
 export const FORM_VALIDATE = '@@abstract-form-redux/FORM_VALIDATE';
 export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
 
+interface IElementAttributes {
+  focused?: boolean;
+  visible?: boolean;
+}
+
 interface IAbstractFormState {
   form: Form;
   data: {};
+  ui: {[key:string]: IElementAttributes},
   errors: IError[];
 }
 
@@ -45,6 +52,20 @@ const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
         errors: [],
         data: action.payload
       }};
+  } else if (action.type === FORM_UPDATE_UI) {
+    let {form, errors, data, ui} = state.$$abstractForm;
+    let newUI = action.payload.reduce((acc:any, item: {path: string, properties: any}) => {
+      acc[item.path] = item.properties;
+
+      return acc;
+    }, {});
+
+    return {...state, $$abstractForm: {
+        form,
+        errors,
+        data,
+        ui: {...ui, ...newUI}
+      }};
   } else {
     return state;
   }
@@ -69,7 +90,8 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
         let $$abstractForm: IAbstractFormState = {
           form,
           data: form.select('$'),
-          errors: []
+          errors: [],
+          ui: {}
         };
 
         next({

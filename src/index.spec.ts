@@ -8,7 +8,7 @@ import {
   action,
   FORM_INIT,
   FORM_RESTORE_DATA,
-  FORM_SET_VALUE,
+  FORM_SET_VALUE, FORM_UPDATE_UI,
   FORM_VALIDATE,
   formEnhancer
 } from './index';
@@ -261,6 +261,56 @@ describe('Abstract Form Enhancer', () => {
             errors: []
           });
       });
+    });
+  });
+
+  describe('action FORM_UPDATE_UI', () => {
+    it('should update ui state in store', () => {
+      const spy = chai.spy();
+
+      // @ts-ignore
+      const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+      const store = createStore(dummyReducer, {}, formEnhancer());
+      store.subscribe(spy);
+
+
+      let configString = `{
+        "items": [
+          {
+            "id": "q1",
+            "dataType": "text",
+            "label": "Nick name"
+          },
+          {
+            "id": "q2",
+            "dataType": "number",
+            "label": "Year of birth"
+          }
+        ]
+      }`;
+      store.dispatch(action(FORM_INIT, configString));
+      store.dispatch(action(FORM_UPDATE_UI, [
+        {
+          path: '$.q1',
+          properties: {
+            focused: true
+          }
+        }
+      ]));
+
+
+      expect(spy).to.have.been.called.twice;
+      expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
+        {
+          data: {
+            q1: undefined,
+            q2: undefined
+          },
+          errors: [],
+          ui: {
+            '$.q1': { focused: true }
+          }
+        });
     });
   });
 });
