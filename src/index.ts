@@ -1,13 +1,27 @@
-import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
+import {Action, AnyAction, applyMiddleware, compose, Dispatch, Middleware, Reducer, StoreEnhancer} from "redux";
 import {IError, parseConfig, ValidationResult} from 'abstract-form/lib';
 import {Form} from 'abstract-form/lib/form';
-import {bool} from "prop-types";
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
 export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';
 export const FORM_SET_VALUE = '@@abstract-form-redux/FORM_SET_VALUE';
 export const FORM_VALIDATE = '@@abstract-form-redux/FORM_VALIDATE';
+export const FORM_SUBMIT = '@@abstract-form-redux/FORM_SUBMIT';
 export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
+
+export enum FormActionType {
+  FORM_INIT,
+  FORM_RESTORE_DATA,
+  FORM_SET_VALUE,
+  FORM_VALIDATE,
+  FORM_SUBMIT,
+  FORM_UPDATE_UI
+}
+
+interface IFormAction extends AnyAction {
+  type: FormActionType,
+  payload: any;
+}
 
 interface IElementAttributes {
   focused?: boolean;
@@ -25,18 +39,18 @@ interface IAbstractFormStateContainer {
   $$abstractForm: IAbstractFormState
 }
 
-const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
-  if (action.type === FORM_INIT) {
+const formReducer: Reducer<{}, IFormAction> = (state: any, action: IFormAction) => {
+  if (action.type === FormActionType.FORM_INIT) {
     let $$abstractForm = action.payload;
     return {...state, $$abstractForm};
-  } else if (action.type === FORM_SET_VALUE) {
+  } else if (action.type === FormActionType.FORM_SET_VALUE) {
     let {form, errors} = state.$$abstractForm;
     return {...state, $$abstractForm: {
       form,
       errors,
       data: action.payload
     }};
-  } else if (action.type === FORM_VALIDATE) {
+  } else if (action.type === FormActionType.FORM_VALIDATE) {
     let { form, data } = state.$$abstractForm;
     let payload:ValidationResult = action.payload;
 
@@ -45,14 +59,14 @@ const formReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => {
         data,
         errors: payload.ok?[]:payload.errors
       }};
-  } else if (action.type === FORM_RESTORE_DATA) {
+  } else if (action.type === FormActionType.FORM_RESTORE_DATA) {
     let {form} = state.$$abstractForm;
     return {...state, $$abstractForm: {
         form,
         errors: [],
         data: action.payload
       }};
-  } else if (action.type === FORM_UPDATE_UI) {
+  } else if (action.type === FormActionType.FORM_UPDATE_UI) {
     let {form, errors, data, ui} = state.$$abstractForm;
     let newUI = action.payload.reduce((acc:any, item: {path: string, properties: any}) => {
       acc[item.path] = item.properties;
@@ -80,7 +94,7 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
     const state:IAbstractFormStateContainer = <IAbstractFormStateContainer>store.getState();
 
     switch (action.type) {
-      case FORM_INIT: {
+      case FormActionType.FORM_INIT: {
         if (ensureState(state)) {
           return;
         }
@@ -95,13 +109,13 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
         };
 
         next({
-          type: FORM_INIT,
+          type: FormActionType.FORM_INIT,
           payload: $$abstractForm
         });
 
         break;
       }
-      case FORM_RESTORE_DATA: {
+      case FormActionType.FORM_RESTORE_DATA: {
         if (!ensureState(state)) {
           return;
         }
@@ -111,13 +125,13 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 
         form.setData('$', value);
         next({
-          type: FORM_RESTORE_DATA,
+          type: FormActionType.FORM_RESTORE_DATA,
           payload: form.select('$')
         });
 
         break;
       }
-      case FORM_SET_VALUE: {
+      case FormActionType.FORM_SET_VALUE: {
         if (!ensureState(state)) {
           return;
         }
@@ -126,13 +140,13 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 
         form.setData(path, value);
         next({
-          type: FORM_SET_VALUE,
+          type: FormActionType.FORM_SET_VALUE,
           payload: form.select('$')
         });
 
         break;
       }
-      case FORM_VALIDATE: {
+      case FormActionType.FORM_VALIDATE: {
         if (!ensureState(state)) {
           return;
         }
@@ -143,7 +157,7 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
         if (paths === '$') {
           result = form.validate(paths)
           next({
-            type: FORM_VALIDATE,
+            type: FormActionType.FORM_VALIDATE,
             payload: result
           });
           return;
@@ -159,7 +173,7 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
           }, new ValidationResult())
 
           next({
-            type: FORM_VALIDATE,
+            type: FormActionType.FORM_VALIDATE,
             payload: result
           });
         }
@@ -184,6 +198,6 @@ export function formEnhancer(options: any = {}):(store:any)=>any {
   };
 }
 
-export function action(type: string, payload: any):{ type: string, payload: any } {
+export function action(type: FormActionType, payload: any):{ type: FormActionType, payload: any } {
   return { type, payload };
 }

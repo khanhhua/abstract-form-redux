@@ -1,17 +1,13 @@
 import chai, {expect} from 'chai'
 import chaiSpies from 'chai-spies';
-
-chai.use(chaiSpies);
-
 import {AnyAction, createStore, Reducer} from 'redux';
 import {
   action,
-  FORM_INIT,
-  FORM_RESTORE_DATA,
-  FORM_SET_VALUE, FORM_UPDATE_UI,
-  FORM_VALIDATE,
+  FormActionType,
   formEnhancer
 } from './index';
+
+chai.use(chaiSpies);
 
 describe('Abstract Form Enhancer', () => {
   describe('action FORM_INIT', () => {
@@ -37,7 +33,7 @@ describe('Abstract Form Enhancer', () => {
           }
         ]
       }`;
-      store.dispatch(action(FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
 
       expect(spy).to.have.been.called.once;
       expect(store.getState()).to.have.deep.property('$$abstractForm').that.include(
@@ -75,8 +71,8 @@ describe('Abstract Form Enhancer', () => {
           }
         ]
       }`;
-      store.dispatch(action(FORM_INIT, configString));
-      store.dispatch(action(FORM_RESTORE_DATA, {
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_RESTORE_DATA, {
         q1: 'Tom',
         q2: 1980
       }));
@@ -114,8 +110,8 @@ describe('Abstract Form Enhancer', () => {
       const store = createStore(dummyReducer, {}, formEnhancer());
       store.subscribe(spy);
 
-      store.dispatch(action(FORM_INIT, configString));
-      store.dispatch(action(FORM_SET_VALUE, {
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_SET_VALUE, {
         path: '$',
         value: {
           q1: 'Tom',
@@ -146,21 +142,21 @@ describe('Abstract Form Enhancer', () => {
         store.subscribe(spy);
 
         let configString = `{
-        "items": [
-          {
-            "id": "q1",
-            "dataType": "text",
-            "label": "Nick name"
-          },
-          {
-            "id": "q2",
-            "dataType": "number",
-            "label": "Year of birth"
-          }
-        ]
-      }`;
-        store.dispatch(action(FORM_INIT, configString));
-        store.dispatch(action(FORM_VALIDATE, {
+          "items": [
+            {
+              "id": "q1",
+              "dataType": "text",
+              "label": "Nick name"
+            },
+            {
+              "id": "q2",
+              "dataType": "number",
+              "label": "Year of birth"
+            }
+          ]
+        }`;
+        store.dispatch(action(FormActionType.FORM_INIT, configString));
+        store.dispatch(action(FormActionType.FORM_VALIDATE, {
           paths: '$'
         }));
 
@@ -196,8 +192,8 @@ describe('Abstract Form Enhancer', () => {
           }
         ]
       }`;
-        store.dispatch(action(FORM_INIT, configString));
-        store.dispatch(action(FORM_VALIDATE, {
+        store.dispatch(action(FormActionType.FORM_INIT, configString));
+        store.dispatch(action(FormActionType.FORM_VALIDATE, {
           paths: '$'
         }));
 
@@ -246,8 +242,8 @@ describe('Abstract Form Enhancer', () => {
             }
           ]
         }`;
-        store.dispatch(action(FORM_INIT, configString));
-        store.dispatch(action(FORM_VALIDATE, {
+        store.dispatch(action(FormActionType.FORM_INIT, configString));
+        store.dispatch(action(FormActionType.FORM_VALIDATE, {
           paths: ['q1','q2']
         }));
 
@@ -288,8 +284,8 @@ describe('Abstract Form Enhancer', () => {
           }
         ]
       }`;
-      store.dispatch(action(FORM_INIT, configString));
-      store.dispatch(action(FORM_UPDATE_UI, [
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_UPDATE_UI, [
         {
           path: '$.q1',
           properties: {
