@@ -1,7 +1,6 @@
 import {AnyAction, applyMiddleware, compose, Middleware, Reducer, StoreEnhancer} from "redux";
 import {IError, parseConfig, ValidationResult} from 'abstract-form/lib';
 import {Form} from 'abstract-form/lib/form';
-import {bool} from "prop-types";
 
 export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
 export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';

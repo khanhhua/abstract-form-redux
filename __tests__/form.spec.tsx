@@ -11,9 +11,9 @@ import {Provider, connect} from 'react-redux';
 import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
 import {action, FORM_INIT, FORM_SET_VALUE, formEnhancer} from '../src';
 import {IFormItemConfig} from 'abstract-form';
-import {FORM_VALIDATE} from "../src";
-import {IError} from "abstract-form/lib";
-import {FORM_RESTORE_DATA} from "../src";
+import {FORM_VALIDATE} from '../src';
+import {IError} from 'abstract-form/lib';
+import {FORM_RESTORE_DATA} from '../src';
 
 class Form extends React.Component {
   constructor(props:any) {
