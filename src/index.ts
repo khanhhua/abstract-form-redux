@@ -1,21 +1,14 @@
-import {Action, AnyAction, applyMiddleware, compose, Dispatch, Middleware, Reducer, StoreEnhancer} from "redux";
+import {Action, AnyAction, applyMiddleware, compose, Dispatch, Middleware, Reducer, StoreEnhancer} from 'redux';
 import {IError, parseConfig, ValidationResult} from 'abstract-form/lib';
 import {Form} from 'abstract-form/lib/form';
 
-export const FORM_INIT = '@@abstract-form-redux/FORM_INIT';
-export const FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA';
-export const FORM_SET_VALUE = '@@abstract-form-redux/FORM_SET_VALUE';
-export const FORM_VALIDATE = '@@abstract-form-redux/FORM_VALIDATE';
-export const FORM_SUBMIT = '@@abstract-form-redux/FORM_SUBMIT';
-export const FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI';
-
 export enum FormActionType {
-  FORM_INIT,
-  FORM_RESTORE_DATA,
-  FORM_SET_VALUE,
-  FORM_VALIDATE,
-  FORM_SUBMIT,
-  FORM_UPDATE_UI
+  FORM_INIT = '@@abstract-form-redux/FORM_INIT',
+  FORM_RESTORE_DATA = '@@abstract-form-redux/FORM_RESTORE_DATA',
+  FORM_SET_VALUE = '@@abstract-form-redux/FORM_SET_VALUE',
+  FORM_VALIDATE = '@@abstract-form-redux/FORM_VALIDATE',
+  FORM_SUBMIT = '@@abstract-form-redux/FORM_SUBMIT',
+  FORM_UPDATE_UI = '@@abstract-form-redux/FORM_UPDATE_UI'
 }
 
 interface IFormAction extends AnyAction {
@@ -170,7 +163,7 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
               thisValidation.errors.forEach(item => acc.addError(item))
               return acc;
             }
-          }, new ValidationResult())
+          }, new ValidationResult());
 
           next({
             type: FormActionType.FORM_VALIDATE,
@@ -180,6 +173,87 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 
         break;
       }
+      case FormActionType.FORM_SUBMIT: {
+        if (!ensureState(state)) {
+          return;
+        }
+
+        let form:Form = state.$$abstractForm.form;
+        const { url, action: formAction } = action.payload;
+        const data = form.select('$');
+
+        if (url && formAction) {
+          throw new Error('Both URL and action handler are defined');
+        }
+
+        if (formAction && typeof formAction === 'function') {
+          const ret = formAction(data);
+          if (ret && ret.then) {
+            next({
+              type: FormActionType.FORM_SUBMIT,
+              status: 'pending',
+              payload: data
+            });
+            ret.then((resData:any) => {
+              next({
+                type: FormActionType.FORM_SUBMIT,
+                status: 'success',
+                payload: resData
+              });
+            }).catch((error:any) => {
+              next({
+                type: FormActionType.FORM_SUBMIT,
+                status: 'error',
+                payload: error
+              });
+            })
+          } else {
+            next({
+              type: FormActionType.FORM_SUBMIT,
+              payload: ret
+            });
+          }
+        } else if (url) {
+          next({
+            type: FormActionType.FORM_SUBMIT,
+            status: 'pending',
+            payload: data
+          });
+
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              cache: 'no-cache',
+              contentType: 'application/json',
+            },
+            body: JSON.stringify(data),
+          }).then((res:any) => {
+            if (res.ok) {
+              return res.json();
+            } else {
+              throw new Error('Data error');
+            }
+          }).then((resData:any) => {
+            next({
+              type: FormActionType.FORM_SUBMIT,
+              status: 'success',
+              payload: resData
+            });
+          }).catch(error => {
+            next({
+              type: FormActionType.FORM_SUBMIT,
+              status: 'error',
+              payload: error
+            });
+          })
+        } else {
+          next({
+            type: FormActionType.FORM_SUBMIT,
+            payload: data
+          });
+        }
+        break;
+      }
       default:
         next(action);
     }
@@ -187,9 +261,13 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
 }
 
 export function formEnhancer(options: any = {}):(store:any)=>any {
-  return createStore => (reducer: Reducer<{}, AnyAction>, initialState: any) => {
+  return createStore => (reducer: Reducer<{}, AnyAction>, initialState: any, middlewares:Array<Middleware>) => {
+    function composedReducer(state: any, action: any) {
+      return reducer(formReducer(state, action), action);
+    }
+
     const liftedStore = createStore(
-      compose(reducer, formReducer),
+      composedReducer,
       { ...initialState, $$abstractForm:null },
       applyMiddleware(formMiddleware(options))
     );

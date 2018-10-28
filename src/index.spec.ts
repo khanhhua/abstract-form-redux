@@ -309,4 +309,130 @@ describe('Abstract Form Enhancer', () => {
         });
     });
   });
+
+  describe('action FORM_SUBMIT', () => {
+    before(() => {
+      // @ts-ignore
+      global.fetch = chai.spy(() => new Promise((resolve:((_:any) => void)) => {
+        resolve({
+          json() {
+            return Promise.resolve('"ok"');
+          }
+        })
+      }));
+    });
+    after(() => {
+      // @ts-ignore
+      delete global.fetch;
+    });
+
+    it('should collect form data and invoke URL formAction', (done) => {
+      const MOCK_URL = 'http://localhost/api/form';
+      const spy = chai.spy();
+
+      // @ts-ignore
+      const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+      const store = createStore(dummyReducer, {}, formEnhancer());
+      store.subscribe(spy);
+
+      let configString = `{
+          "items": [
+            {
+              "id": "q1",
+              "dataType": "text",
+              "label": "Nick name"
+            },
+            {
+              "id": "q2",
+              "dataType": "number",
+              "label": "Year of birth"
+            }
+          ]
+        }`;
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_SET_VALUE, {
+        path: '$',
+        value: {
+          q1: 'Tom',
+          q2: 1987
+        }
+      }));
+      store.dispatch(action(FormActionType.FORM_SUBMIT, {
+        url: MOCK_URL,
+      }));
+
+      setTimeout(() => {
+        // @ts-ignore
+        expect(global.fetch).to.have.been.called.once.with({
+          method: 'POST',
+          headers: {
+            cache: 'no-cache',
+            contentType: 'application/json',
+          },
+          body: JSON.stringify({
+            q1: 'Tom',
+            q2: 1987
+          }),
+        });
+        expect(spy).to.have.been.called.exactly(4);
+
+        done();
+      });
+    });
+
+    it('should collect form data and invoke a sync action function', (done) => {
+      const MOCK_FUNCTION = chai.spy((_:any) => 'ok');
+      const spy = chai.spy();
+      const spyReducer = chai.spy((a:any) => true);
+
+      // @ts-ignore
+      const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: any) => {
+        if (action && action.type === FormActionType.FORM_SUBMIT) {
+          spyReducer(action.payload);
+        }
+
+        return state;
+      };
+      const store = createStore(dummyReducer, {}, formEnhancer());
+      store.subscribe(spy);
+
+      let configString = `{
+          "items": [
+            {
+              "id": "q1",
+              "dataType": "text",
+              "label": "Nick name"
+            },
+            {
+              "id": "q2",
+              "dataType": "number",
+              "label": "Year of birth"
+            }
+          ]
+        }`;
+      store.dispatch(action(FormActionType.FORM_INIT, configString));
+      store.dispatch(action(FormActionType.FORM_SET_VALUE, {
+        path: '$',
+        value: {
+          q1: 'Tom',
+          q2: 1987
+        }
+      }));
+      store.dispatch(action(FormActionType.FORM_SUBMIT, {
+        action: MOCK_FUNCTION,
+      }));
+
+      setTimeout(() => {
+        // @ts-ignore
+        expect(MOCK_FUNCTION).to.have.been.called.once.with({
+          q1: 'Tom',
+          q2: 1987
+        });
+        expect(spy).to.have.been.called.exactly(3);
+        expect(spyReducer).to.have.been.called.with('ok');
+
+        done();
+      });
+    });
+  });
 });
