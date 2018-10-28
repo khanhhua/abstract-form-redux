@@ -1,19 +1,18 @@
 import 'core-js/fn/object/entries';
 import enzyme from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
-
-enzyme.configure({adapter: new Adapter()});
-
-import {expect} from 'chai';
+import chai, {expect} from 'chai';
+import chaiSpies from 'chai-spies';
 
 import React from 'react';
-import {Provider, connect} from 'react-redux';
-import {AnyAction, applyMiddleware, createStore, Reducer} from 'redux';
-import {action, FORM_INIT, FORM_SET_VALUE, formEnhancer} from '../src';
+import {connect} from 'react-redux';
+import {AnyAction, createStore, Reducer} from 'redux';
+import {action, FormActionType, formEnhancer} from '../src';
 import {IFormItemConfig} from 'abstract-form';
-import {FORM_VALIDATE} from "../src";
-import {IError} from "abstract-form/lib";
-import {FORM_RESTORE_DATA} from "../src";
+import {IError} from 'abstract-form/lib';
+
+enzyme.configure({adapter: new Adapter()});
+chai.use(chaiSpies);
 
 class Form extends React.Component {
   constructor(props:any) {
@@ -38,8 +37,7 @@ class Form extends React.Component {
         }
       ]
     }`;
-    dispatch(action(FORM_INIT, configString));
-    this.forceUpdate();
+    dispatch(action(FormActionType.FORM_INIT, configString));
   }
 
   render() {
@@ -88,7 +86,7 @@ describe('Static Form Integration', () => {
     const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
     const store = createStore(dummyReducer, {}, formEnhancer());
     const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
-    store.dispatch(action(FORM_SET_VALUE, {
+    store.dispatch(action(FormActionType.FORM_SET_VALUE, {
       path: '$',
       value: {
         q1: 'Tom',
@@ -99,18 +97,39 @@ describe('Static Form Integration', () => {
     expect(wrapper.html()).to.be.equal('<ul><li>Tom</li><li>1980</li></ul>');
   });
 
+  it('should react to form submit', () => {
+    // @ts-ignore
+    const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
+    const store = createStore(dummyReducer, {}, formEnhancer());
+    const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
+    const spy = chai.spy();
+
+    store.dispatch(action(FormActionType.FORM_SET_VALUE, {
+      path: '$',
+      value: {
+        q1: 'Tom',
+        q2: 1980
+      }
+    }));
+
+    store.dispatch(action(FormActionType.FORM_SUBMIT, { action: spy }));
+    expect(wrapper.html()).to.be.equal('<ul><li>Tom</li><li>1980</li></ul>');
+
+    expect(spy).to.have.been.called;
+  });
+
   it('should render errors', () => {
     // @ts-ignore
     const dummyReducer: Reducer<{}, AnyAction> = (state: any, action: AnyAction) => state;
     const store = createStore(dummyReducer, {}, formEnhancer());
     const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
-    store.dispatch(action(FORM_SET_VALUE, {
+    store.dispatch(action(FormActionType.FORM_SET_VALUE, {
       path: '$',
       value: {
         q2: 1980
       }
     }));
-    store.dispatch(action(FORM_VALIDATE, { paths: '$' }));
+    store.dispatch(action(FormActionType.FORM_VALIDATE, { paths: '$' }));
 
     expect(wrapper.html()).to.be.equal('<ul><li></li><li>1980</li><li>error: $.q1 required</li></ul>');
   });
@@ -121,8 +140,8 @@ describe('Static Form Integration', () => {
     const store = createStore(dummyReducer, {}, formEnhancer());
     const wrapper = enzyme.mount(<ConnectedForm store={store} dispatch={store.dispatch} />);
 
-    store.dispatch(action(FORM_VALIDATE, { paths: '$' }));
-    store.dispatch(action(FORM_RESTORE_DATA, {
+    store.dispatch(action(FormActionType.FORM_VALIDATE, { paths: '$' }));
+    store.dispatch(action(FormActionType.FORM_RESTORE_DATA, {
       q1: 'Tom',
       q2: 1980
     }));
