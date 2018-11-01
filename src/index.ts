@@ -86,121 +86,175 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
   return <Middleware<any, any, any>>(store => next => action => {
     const state:IAbstractFormStateContainer = <IAbstractFormStateContainer>store.getState();
 
-    switch (action.type) {
-      case FormActionType.FORM_INIT: {
-        if (ensureState(state)) {
-          return;
-        }
+    return new Promise((resolve: ((_?: any) => void), reject: ((_: any) => void)) => {
+      switch (action.type) {
+        case FormActionType.FORM_INIT: {
+          if (ensureState(state)) {
+            return;
+          }
 
-        let config = parseConfig(action.payload);
-        let form:Form = new Form(config);
-        let $$abstractForm: IAbstractFormState = {
-          form,
-          data: form.select('$'),
-          errors: [],
-          ui: {}
-        };
+          let config = parseConfig(action.payload);
+          let form:Form = new Form(config);
+          let $$abstractForm: IAbstractFormState = {
+            form,
+            data: form.select('$'),
+            errors: [],
+            ui: {}
+          };
 
-        next({
-          type: FormActionType.FORM_INIT,
-          payload: $$abstractForm
-        });
+          resolve();
 
-        break;
-      }
-      case FormActionType.FORM_RESTORE_DATA: {
-        if (!ensureState(state)) {
-          return;
-        }
-
-        let form:Form = state.$$abstractForm.form;
-        const value = action.payload;
-
-        form.setData('$', value);
-        next({
-          type: FormActionType.FORM_RESTORE_DATA,
-          payload: form.select('$')
-        });
-
-        break;
-      }
-      case FormActionType.FORM_SET_VALUE: {
-        if (!ensureState(state)) {
-          return;
-        }
-        let form:Form = state.$$abstractForm.form;
-        const { path, value } = action.payload;
-
-        form.setData(path, value);
-        next({
-          type: FormActionType.FORM_SET_VALUE,
-          payload: form.select('$')
-        });
-
-        break;
-      }
-      case FormActionType.FORM_VALIDATE: {
-        if (!ensureState(state)) {
-          return;
-        }
-        let form:Form = state.$$abstractForm.form;
-        const { paths } = action.payload;
-        let result:ValidationResult;
-
-        if (paths === '$') {
-          result = form.validate(paths)
           next({
-            type: FormActionType.FORM_VALIDATE,
-            payload: result
+            type: FormActionType.FORM_INIT,
+            payload: $$abstractForm
           });
-          return;
-        } else if (Array.isArray(paths)) {
-          result = paths.reduce((acc: ValidationResult, path:string) => {
-            const thisValidation = form.validate(path);
-            if (thisValidation.ok) {
-              return acc;
+
+          break;
+        }
+        case FormActionType.FORM_RESTORE_DATA: {
+          if (!ensureState(state)) {
+            return;
+          }
+
+          let form:Form = state.$$abstractForm.form;
+          const value = action.payload;
+
+          form.setData('$', value);
+          resolve();
+
+          next({
+            type: FormActionType.FORM_RESTORE_DATA,
+            payload: form.select('$')
+          });
+
+          break;
+        }
+        case FormActionType.FORM_SET_VALUE: {
+          if (!ensureState(state)) {
+            return;
+          }
+          let form:Form = state.$$abstractForm.form;
+          const { path, value } = action.payload;
+
+          form.setData(path, value);
+          resolve();
+
+          next({
+            type: FormActionType.FORM_SET_VALUE,
+            payload: form.select('$')
+          });
+
+          break;
+        }
+        case FormActionType.FORM_VALIDATE: {
+          if (!ensureState(state)) {
+            return;
+          }
+          let form:Form = state.$$abstractForm.form;
+          const { paths } = action.payload;
+          let result:ValidationResult;
+
+          if (paths === '$') {
+            result = form.validate(paths);
+            resolve(result.ok);
+
+            next({
+              type: FormActionType.FORM_VALIDATE,
+              payload: result
+            });
+            return;
+          } else if (Array.isArray(paths)) {
+            result = paths.reduce((acc: ValidationResult, path:string) => {
+              const thisValidation = form.validate(path);
+              if (thisValidation.ok) {
+                return acc;
+              } else {
+                thisValidation.errors.forEach(item => acc.addError(item))
+                return acc;
+              }
+            }, new ValidationResult());
+            resolve(result);
+
+            next({
+              type: FormActionType.FORM_VALIDATE,
+              payload: result
+            });
+          }
+
+          break;
+        }
+        case FormActionType.FORM_SUBMIT: {
+          if (!ensureState(state)) {
+            return;
+          }
+
+          let form:Form = state.$$abstractForm.form;
+          const { url, action: formAction } = action.payload;
+          const data = form.select('$');
+
+          if (url && formAction) {
+            throw new Error('Both URL and action handler are defined');
+          }
+
+          if (formAction && typeof formAction === 'function') {
+            const ret = formAction(data);
+            if (ret && ret.then) {
+              next({
+                type: FormActionType.FORM_SUBMIT,
+                status: 'pending',
+                payload: data
+              });
+              ret.then((resData:any) => {
+                resolve();
+                next({
+                  type: FormActionType.FORM_SUBMIT,
+                  status: 'success',
+                  payload: resData
+                });
+              }).catch((error:any) => {
+                reject(error);
+                next({
+                  type: FormActionType.FORM_SUBMIT,
+                  status: 'error',
+                  payload: error
+                });
+              })
             } else {
-              thisValidation.errors.forEach(item => acc.addError(item))
-              return acc;
+              resolve();
+              next({
+                type: FormActionType.FORM_SUBMIT,
+                payload: ret
+              });
             }
-          }, new ValidationResult());
-
-          next({
-            type: FormActionType.FORM_VALIDATE,
-            payload: result
-          });
-        }
-
-        break;
-      }
-      case FormActionType.FORM_SUBMIT: {
-        if (!ensureState(state)) {
-          return;
-        }
-
-        let form:Form = state.$$abstractForm.form;
-        const { url, action: formAction } = action.payload;
-        const data = form.select('$');
-
-        if (url && formAction) {
-          throw new Error('Both URL and action handler are defined');
-        }
-
-        if (formAction && typeof formAction === 'function') {
-          const ret = formAction(data);
-          if (ret && ret.then) {
+          } else if (url) {
             next({
               type: FormActionType.FORM_SUBMIT,
               status: 'pending',
               payload: data
             });
-            ret.then((resData:any) => {
+
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                cache: 'no-cache',
+                contentType: 'application/json',
+              },
+              body: JSON.stringify(data),
+            }).then((res:any) => {
+              if (res.ok) {
+                return res.json();
+              } else {
+                throw new Error('Data error');
+              }
+            }).then((resData:any) => {
+              resolve(resData);
               next({
                 type: FormActionType.FORM_SUBMIT,
                 status: 'success',
                 payload: resData
               });
-            }).catch((error:any) => {
+            }).catch(error => {
+              reject(error);
               next({
                 type: FormActionType.FORM_SUBMIT,
                 status: 'error',
@@ -208,55 +262,19 @@ export function formMiddleware(options: any = {}):Middleware<any, any, any> {
               });
             })
           } else {
+            resolve();
             next({
               type: FormActionType.FORM_SUBMIT,
-              payload: ret
+              payload: data
             });
           }
-        } else if (url) {
-          next({
-            type: FormActionType.FORM_SUBMIT,
-            status: 'pending',
-            payload: data
-          });
-
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              cache: 'no-cache',
-              contentType: 'application/json',
-            },
-            body: JSON.stringify(data),
-          }).then((res:any) => {
-            if (res.ok) {
-              return res.json();
-            } else {
-              throw new Error('Data error');
-            }
-          }).then((resData:any) => {
-            next({
-              type: FormActionType.FORM_SUBMIT,
-              status: 'success',
-              payload: resData
-            });
-          }).catch(error => {
-            next({
-              type: FormActionType.FORM_SUBMIT,
-              status: 'error',
-              payload: error
-            });
-          })
-        } else {
-          next({
-            type: FormActionType.FORM_SUBMIT,
-            payload: data
-          });
+          break;
         }
-        break;
+        default:
+          resolve();
+          next(action);
       }
-      default:
-        next(action);
-    }
+    });
   })
 }
 
